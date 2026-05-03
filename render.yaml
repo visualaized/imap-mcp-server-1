@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: imap-mcp-server
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:http
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: IMAP_HOST
+        sync: false
+      - key: IMAP_USER
+        sync: false
+      - key: IMAP_PASSWORD
+        sync: false
+      - key: IMAP_PORT
+        value: "993"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MCP_AUTH_TOKEN
+        sync: false

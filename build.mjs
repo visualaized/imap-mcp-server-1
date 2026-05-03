@@ -39,4 +39,14 @@ await esbuild.build({
   external,
 });
 
+// Build HTTP/SSE MCP server for remote hosting
+await esbuild.build({
+  entryPoints: ['src/server-http.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  outfile: 'dist/server-http.js',
+  external,
+});
+
 console.log('Build complete!');
