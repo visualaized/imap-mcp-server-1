@@ -22,30 +22,57 @@ const smtpService = new SmtpService();
 const spamService = new SpamService();
 imapService.setAccountManager(accountManager);
 
-async function setupFromEnv(): Promise<void> {
-  const { IMAP_HOST, IMAP_USER, IMAP_PASSWORD, IMAP_PORT, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
-  if (!IMAP_HOST || !IMAP_USER || !IMAP_PASSWORD) return;
-
+async function setupAccountFromVars(
+  imapHost: string, imapUser: string, imapPassword: string,
+  imapPort?: string, smtpHost?: string, smtpPort?: string,
+  smtpUser?: string, smtpPassword?: string
+): Promise<void> {
   const existing = accountManager.getAllAccounts();
-  if (existing.some(a => a.user === IMAP_USER)) return;
+  if (existing.some(a => a.user === imapUser)) return;
 
   await accountManager.addAccount({
-    name: IMAP_USER,
-    host: IMAP_HOST,
-    port: parseInt(IMAP_PORT || '993'),
-    user: IMAP_USER,
-    password: IMAP_PASSWORD,
+    name: imapUser,
+    host: imapHost,
+    port: parseInt(imapPort || '993'),
+    user: imapUser,
+    password: imapPassword,
     tls: true,
-    smtp: SMTP_HOST ? {
-      host: SMTP_HOST,
-      port: parseInt(SMTP_PORT || '587'),
-      secure: parseInt(SMTP_PORT || '587') === 465,
-      user: SMTP_USER || IMAP_USER,
-      password: SMTP_PASSWORD || IMAP_PASSWORD,
+    smtp: smtpHost ? {
+      host: smtpHost,
+      port: parseInt(smtpPort || '587'),
+      secure: parseInt(smtpPort || '587') === 465,
+      user: smtpUser || imapUser,
+      password: smtpPassword || imapPassword,
     } : undefined,
   });
 
-  console.error(`Auto-configured IMAP account: ${IMAP_USER}`);
+  console.error(`Auto-configured IMAP account: ${imapUser}`);
+}
+
+async function setupFromEnv(): Promise<void> {
+  const env = process.env;
+
+  // Single account (IMAP_HOST, IMAP_USER, IMAP_PASSWORD)
+  if (env.IMAP_HOST && env.IMAP_USER && env.IMAP_PASSWORD) {
+    await setupAccountFromVars(
+      env.IMAP_HOST, env.IMAP_USER, env.IMAP_PASSWORD,
+      env.IMAP_PORT, env.SMTP_HOST, env.SMTP_PORT, env.SMTP_USER, env.SMTP_PASSWORD
+    );
+  }
+
+  // Multiple accounts (IMAP_HOST_1, IMAP_HOST_2, ...)
+  for (let i = 1; ; i++) {
+    const host = env[`IMAP_HOST_${i}`];
+    const user = env[`IMAP_USER_${i}`];
+    const password = env[`IMAP_PASSWORD_${i}`];
+    if (!host || !user || !password) break;
+
+    await setupAccountFromVars(
+      host, user, password,
+      env[`IMAP_PORT_${i}`], env[`SMTP_HOST_${i}`],
+      env[`SMTP_PORT_${i}`], env[`SMTP_USER_${i}`], env[`SMTP_PASSWORD_${i}`]
+    );
+  }
 }
 
 function createMcpServer(): McpServer {
